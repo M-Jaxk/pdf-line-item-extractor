@@ -3,21 +3,21 @@ import { extractDocument } from "@/lib/extraction/extractor";
 import { createTextPdf, itemRow, tableHeader } from "@/tests/fixtures/pdf-factory";
 
 describe("conservative extraction refusals", () => {
-  it("refuses an ambiguous decimal/thousands separator instead of converting it", async () => {
-    const pdf = await createTextPdf([
-      tableHeader(),
-      itemRow({ unitPrice: "$1.234", lineAmount: "$2.47" }),
-    ]);
+    it("refuses an ambiguous decimal/thousands separator instead of converting it", async () => {
+      const pdf = await createTextPdf([
+        tableHeader(),
+        itemRow({ unitPrice: "$1.234", lineAmount: "$2.47" }),
+      ]);
 
-    const result = await extractDocument(pdf, "ambiguous-number.pdf");
+      const result = await extractDocument(pdf, "ambiguous-number.pdf");
 
-    expect(result.items).toEqual([]);
-    expect(result.refusals).toHaveLength(1);
-    expect(result.refusals[0]).toMatchObject({
-      reason: "ambiguous_number_format",
-      page: 1,
-      sourceText: expect.stringContaining("$1.234"),
-    });
+      expect(result.items).toEqual([]);
+      expect(result.refusals).toHaveLength(1);
+      expect(result.refusals[0]).toMatchObject({
+        reason: "ambiguous_number_format",
+        page: 1,
+        sourceText: expect.stringContaining("$1.234"),
+      });
   });
 
   it("keeps an absent quantity null and explains that it was not estimated", async () => {
