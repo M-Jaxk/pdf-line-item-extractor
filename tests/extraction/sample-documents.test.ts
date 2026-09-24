@@ -87,13 +87,17 @@ describe.skipIf(!samplesAvailable)("provided assessment PDFs", () => {
     expect(result.items.reduce((sum, item) => sum + (item.lineAmount ?? 0), 0)).toBe(1270);
   });
 
-  it("extracts rows across IB-STMT47 and identifies its blank page", async () => {
+  it("extracts text pages in IB-STMT47 and refuses its image-only page 4", async () => {
     const result = await extractSample("IB-STMT47.pdf");
 
     expect(result.items).toHaveLength(21);
     expect(result.items.every((item) => item.evidence.page >= 1 && item.evidence.page <= 8)).toBe(true);
     expect(result.refusals).toContainEqual(
-      expect.objectContaining({ page: 4, reason: "no_text_layer" }),
+      expect.objectContaining({
+        page: 4,
+        reason: "no_text_layer",
+        message: expect.stringContaining("image-only content"),
+      }),
     );
     expect(result.refusals.filter((refusal) => refusal.reason === "ambiguous_columns")).toEqual([]);
   });

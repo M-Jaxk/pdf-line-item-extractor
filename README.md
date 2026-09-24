@@ -2,6 +2,14 @@
 
 A small web app and conservative PDF-to-JSON extraction service for invoices, packing lists, and delivery documents. It uses PDF text positioning and explicit table headings; it does not use OCR or an AI model. A value is emitted only when its source row can be identified, and every extracted item includes its page and reconstructed source line.
 
+## Project workflow
+
+![End-to-end PDF Line Item Extractor workflow](DOC/pdf-line-item-extractor-workflow.png)
+
+[Open the scalable SVG diagram](DOC/pdf-line-item-extractor-workflow.svg).
+
+[Read the ASCII code walkthrough](DOC/EXTRACTION-WALKTHROUGH.txt).
+
 ## Run locally
 
 Requirements: Node.js 22.13+ (Node.js 24 recommended).

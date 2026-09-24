@@ -2,7 +2,7 @@ import type { Evidence as EvidenceData } from "@/lib/extraction/schema";
 
 export function Evidence({ evidence }: { evidence: EvidenceData }) {
   return (
-    <details className="group mt-3 rounded-xl border border-slate-200 bg-slate-50">
+    <details className="group w-full rounded-xl border border-slate-200 bg-slate-50">
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-medium text-slate-700 marker:hidden hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 [&::-webkit-details-marker]:hidden">
         <span className="inline-flex items-center gap-2">
           <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="size-4 text-slate-500">

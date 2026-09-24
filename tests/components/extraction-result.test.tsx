@@ -13,10 +13,10 @@ describe("extraction result presentation", () => {
           description: "Fence panel",
           quantity: 4,
           unit: "ea",
-          unitPrice: 25,
-          lineAmount: 100,
+          unitPrice: 312,
+          lineAmount: 1248,
           currency: null,
-          evidence: { page: 1, sourceText: "Fence panel 4 ea $25.00 $100.00" },
+          evidence: { page: 1, sourceText: "Fence panel 4 ea $312.00 $1,248.00" },
         },
       ],
       refusals: [
@@ -41,7 +41,7 @@ describe("extraction result presentation", () => {
         {
           id: "warning-1",
           page: 2,
-          sourceText: "Subtotal $100.00",
+          sourceText: "Subtotal $1,248.00",
           reason: "subtotal_mismatch",
           message: "The printed subtotal does not match the line amount we could read.",
         },
@@ -67,10 +67,15 @@ describe("extraction result presentation", () => {
     expect(html).toContain("The Weight on page 2 is shown in the source but is not included as a quote value by this extractor.");
     expect(html).toContain("Page 2");
     expect(html).toContain("The totals don’t match");
-    expect(html).toContain("Subtotal $100.00");
+    expect(html).toContain("Subtotal $1,248.00");
     expect(html).toContain("The document lists different counts");
     expect(html).toContain("Summary: 9 cartons dispatched");
     expect(html).toContain("Warehouse notes: 11 cartons loaded");
-    expect(html).toContain("Fence panel 4 ea $25.00 $100.00");
+    expect(html).toContain("Fence panel 4 ea $312.00 $1,248.00");
+    expect(html).toContain("$1,248.00");
+    expect(html).toContain(">Qty</span>");
+    expect(html).toContain(">Unit</span>");
+    expect(html).toContain(">Unit price</span>");
+    expect(html).toContain(">Line amount</span>");
   });
 });

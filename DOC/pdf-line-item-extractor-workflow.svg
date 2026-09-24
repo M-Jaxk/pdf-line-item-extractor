@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1240" viewBox="0 0 1800 1240" role="img" aria-labelledby="title description">
+  <title id="title">PDF Line Item Extractor — project workflow</title>
+  <desc id="description">End-to-end workflow from PDF upload through validation, text extraction, conservative line-item parsing, evidence and refusals, JSON response, and user review. Includes project files and tests.</desc>
+  <defs>
+    <linearGradient id="headerGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b172b"/>
+      <stop offset="1" stop-color="#142a45"/>
+    </linearGradient>
+    <linearGradient id="coreGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff7ed"/>
+      <stop offset="1" stop-color="#fffaf3"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10z" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrowTeal" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10z" fill="#0f9b8e"/>
+    </marker>
+    <marker id="arrowAmber" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10z" fill="#d97706"/>
+    </marker>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 2px; }
+      .sectionTitle { font-size: 17px; font-weight: 750; fill: #0f172a; }
+      .body { font-size: 14px; fill: #475569; }
+      .small { font-size: 12px; fill: #64748b; }
+      .path { font-size: 11px; font-weight: 650; fill: #334155; }
+      .node { fill: #ffffff; stroke: #dbe4ee; stroke-width: 1.2; }
+      .nodeBlue { fill: #f5f9ff; stroke: #bfdbfe; stroke-width: 1.2; }
+      .nodeTeal { fill: #f0fdfa; stroke: #99f6e4; stroke-width: 1.2; }
+      .nodeAmber { fill: #fffaf1; stroke: #fed7aa; stroke-width: 1.2; }
+      .bulletBlue { fill: #3b82f6; }
+      .bulletTeal { fill: #0f9b8e; }
+      .bulletAmber { fill: #d97706; }
+    </style>
+  </defs>
+
+  <!-- Canvas and title -->
+  <rect width="1800" height="1240" fill="#f3f6fa"/>
+  <rect width="1800" height="164" fill="url(#headerGradient)"/>
+  <circle cx="1650" cy="34" r="155" fill="#1e3a5f" opacity="0.34"/>
+  <circle cx="1730" cy="145" r="105" fill="#0f9b8e" opacity="0.12"/>
+  <rect x="58" y="35" width="157" height="27" rx="13.5" fill="#ffffff" opacity="0.11"/>
+  <text x="78" y="53" class="eyebrow" fill="#a7f3d0">SYSTEM WORKFLOW</text>
+  <text x="58" y="106" font-size="36" font-weight="780" letter-spacing="-1.1" fill="#ffffff">PDF Line Item Extractor</text>
+  <text x="60" y="137" font-size="15" fill="#cbd5e1">From upload to evidence-backed JSON — with uncertainty carried all the way to the screen.</text>
+  <g transform="translate(1430 47)">
+    <rect width="300" height="60" rx="16" fill="#ffffff" opacity="0.1" stroke="#ffffff" stroke-opacity="0.2"/>
+    <circle cx="28" cy="30" r="6" fill="#34d399"/>
+    <text x="47" y="26" font-size="11" font-weight="800" letter-spacing="1.4" fill="#a7f3d0">DESIGN RULE</text>
+    <text x="47" y="44" font-size="14" font-weight="650" fill="#ffffff">Evidence before inference</text>
+  </g>
+
+  <!-- Four stage panels -->
+  <g filter="url(#shadow)">
+    <rect x="52" y="195" width="365" height="754" rx="22" fill="#ffffff" stroke="#dbe4ee"/>
+    <rect x="442" y="195" width="365" height="754" rx="22" fill="#ffffff" stroke="#dbe4ee"/>
+    <rect x="832" y="195" width="508" height="754" rx="22" fill="url(#coreGradient)" stroke="#fed7aa"/>
+    <rect x="1365" y="195" width="383" height="754" rx="22" fill="#ffffff" stroke="#dbe4ee"/>
+  </g>
+
+  <!-- Flow connectors -->
+  <path d="M420 250h18" stroke="#3b82f6" stroke-width="3" marker-end="url(#arrowBlue)"/>
+  <path d="M810 250h18" stroke="#3b82f6" stroke-width="3" marker-end="url(#arrowBlue)"/>
+  <path d="M1343 250h18" stroke="#0f9b8e" stroke-width="3" marker-end="url(#arrowTeal)"/>
+
+  <!-- Stage 1: UI -->
+  <g>
+    <circle cx="82" cy="235" r="16" fill="#dbeafe"/>
+    <text x="82" y="240" text-anchor="middle" font-size="12" font-weight="850" fill="#1d4ed8">01</text>
+    <text x="110" y="231" class="eyebrow" fill="#2563eb">UPLOAD</text>
+    <text x="110" y="252" class="small">User-facing client flow</text>
+
+    <rect x="76" y="279" width="317" height="107" rx="15" class="nodeBlue"/>
+    <text x="96" y="307" class="sectionTitle">Choose a PDF</text>
+    <text x="96" y="331" class="body">Drop file or browse · validate extension / size</text>
+    <text x="96" y="360" class="path mono">app/page.tsx</text>
+    <text x="96" y="377" class="path mono">components/file-upload.tsx</text>
+
+    <path d="M234 389v26" stroke="#93c5fd" stroke-width="2" marker-end="url(#arrowBlue)"/>
+    <rect x="76" y="423" width="317" height="118" rx="15" class="node"/>
+    <text x="96" y="451" class="sectionTitle">Upload state</text>
+    <circle cx="99" cy="476" r="4" class="bulletBlue"/>
+    <text x="112" y="481" class="body">Reading / loading feedback</text>
+    <circle cx="99" cy="501" r="4" class="bulletBlue"/>
+    <text x="112" y="506" class="body">Keep server’s real error message</text>
+    <circle cx="99" cy="526" r="4" class="bulletBlue"/>
+    <text x="112" y="531" class="body">Never collapse refusals into an error</text>
+
+    <rect x="76" y="562" width="317" height="147" rx="15" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="96" y="591" class="eyebrow" fill="#1d4ed8">REQUEST</text>
+    <text x="96" y="621" font-size="17" font-weight="750" fill="#0f172a">multipart/form-data</text>
+    <text x="96" y="646" class="body">field: <tspan class="mono" font-weight="700">file</tspan> · PDF bytes</text>
+    <text x="96" y="678" class="path mono">POST /api/extract</text>
+
+    <rect x="76" y="730" width="317" height="184" rx="15" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="96" y="760" class="eyebrow" fill="#64748b">PAGE SHELL</text>
+    <text x="96" y="791" class="body">Brand, upload panel, trust statement,</text>
+    <text x="96" y="812" class="body">responsive layout and accessibility labels.</text>
+    <line x1="96" y1="834" x2="373" y2="834" stroke="#e2e8f0"/>
+    <text x="96" y="860" class="path mono">app/layout.tsx · app/globals.css</text>
+    <text x="96" y="885" class="small">Client response is schema-checked before display.</text>
+  </g>
+
+  <!-- Stage 2: API -->
+  <g>
+    <circle cx="472" cy="235" r="16" fill="#dbeafe"/>
+    <text x="472" y="240" text-anchor="middle" font-size="12" font-weight="850" fill="#1d4ed8">02</text>
+    <text x="500" y="231" class="eyebrow" fill="#2563eb">API BOUNDARY</text>
+    <text x="500" y="252" class="small">Validate early · return explainable JSON</text>
+
+    <rect x="466" y="279" width="317" height="101" rx="15" class="nodeBlue"/>
+    <text x="486" y="307" class="sectionTitle">Request guard</text>
+    <text x="486" y="332" class="body">PDF signature · non-empty · ≤ 20 MB</text>
+    <text x="486" y="359" class="path mono">app/api/extract/route.ts</text>
+
+    <path d="M624 383v28" stroke="#93c5fd" stroke-width="2" marker-end="url(#arrowBlue)"/>
+    <rect x="466" y="420" width="317" height="156" rx="15" class="node"/>
+    <text x="486" y="450" class="sectionTitle">Structured failures</text>
+    <text x="486" y="478" class="body">400 · missing / empty / bad form</text>
+    <text x="486" y="503" class="body">413 · file exceeds size limit</text>
+    <text x="486" y="528" class="body">415 · not a PDF signature</text>
+    <text x="486" y="556" class="small">{ ok: false, error: { code, message } }</text>
+
+    <path d="M624 579v28" stroke="#93c5fd" stroke-width="2" marker-end="url(#arrowBlue)"/>
+    <rect x="466" y="616" width="317" height="120" rx="15" class="nodeTeal"/>
+    <text x="486" y="646" class="sectionTitle">Orchestrate document</text>
+    <text x="486" y="672" class="body">Calls extraction core; contains document errors</text>
+    <text x="486" y="706" class="path mono">lib/extraction/extractor.ts</text>
+
+    <rect x="466" y="760" width="317" height="154" rx="15" fill="#f0fdfa" stroke="#99f6e4"/>
+    <text x="486" y="790" class="eyebrow" fill="#0f766e">SUCCESS CONTRACT</text>
+    <text x="486" y="821" class="body">200 even when rows are refused:</text>
+    <text x="486" y="846" class="path mono">{ ok: true, result }</text>
+    <text x="486" y="878" class="small">Refusals are data — not request failures.</text>
+  </g>
+
+  <!-- Stage 3: Extraction engine -->
+  <g>
+    <circle cx="862" cy="235" r="16" fill="#ffedd5"/>
+    <text x="862" y="240" text-anchor="middle" font-size="12" font-weight="850" fill="#c2410c">03</text>
+    <text x="890" y="231" class="eyebrow" fill="#c2410c">EXTRACTION CORE</text>
+    <text x="890" y="252" class="small">Evidence-backed values · conservative acceptance</text>
+
+    <rect x="856" y="279" width="460" height="105" rx="15" class="node"/>
+    <text x="878" y="308" class="sectionTitle">1 · Read PDF pages</text>
+    <text x="878" y="333" class="body">PDF.js text items → positioned tokens → source lines</text>
+    <text x="878" y="362" class="path mono">lib/pdf/extract-text.ts</text>
+
+    <path d="M1086 387v24" stroke="#d97706" stroke-width="2" marker-end="url(#arrowAmber)"/>
+    <rect x="856" y="419" width="460" height="113" rx="15" class="nodeAmber"/>
+    <text x="878" y="449" class="sectionTitle">2 · Map and validate rows</text>
+    <text x="878" y="474" class="body">Headings / columns · number formats · row arithmetic</text>
+    <text x="878" y="508" class="path mono">lib/pdf/extract-line-items.ts</text>
+
+    <path d="M1086 535v22" stroke="#d97706" stroke-width="2" marker-end="url(#arrowAmber)"/>
+    <rect x="856" y="565" width="460" height="79" rx="15" fill="#fff" stroke="#fdba74" stroke-width="1.5"/>
+    <text x="1086" y="596" text-anchor="middle" font-size="16" font-weight="780" fill="#7c2d12">Can every output value be sourced and assigned?</text>
+    <text x="1086" y="621" text-anchor="middle" class="small">Page + exact reconstructed source row required</text>
+
+    <path d="M971 646v24h-5v15" stroke="#0f9b8e" stroke-width="2" fill="none" marker-end="url(#arrowTeal)"/>
+    <path d="M1200 646v24h5v15" stroke="#d97706" stroke-width="2" fill="none" marker-end="url(#arrowAmber)"/>
+    <rect x="856" y="692" width="218" height="112" rx="15" class="nodeTeal"/>
+    <text x="876" y="721" class="eyebrow" fill="#0f766e">CLEAR SOURCE</text>
+    <text x="876" y="749" class="sectionTitle">Emit line item</text>
+    <text x="876" y="775" class="body">numbers + page + sourceText</text>
+    <rect x="1090" y="692" width="226" height="112" rx="15" class="nodeAmber"/>
+    <text x="1110" y="721" class="eyebrow" fill="#b45309">UNCERTAIN / MISSING</text>
+    <text x="1110" y="749" class="sectionTitle">Refuse that value</text>
+    <text x="1110" y="775" class="body">Never fill a gap by guessing</text>
+
+    <rect x="856" y="822" width="460" height="92" rx="15" fill="#fff" stroke="#e2e8f0"/>
+    <text x="878" y="851" class="sectionTitle">Evidence, refusal, and validation</text>
+    <text x="878" y="876" class="path mono">pdf/evidence.ts · errors/refusal.ts · extraction/schema.ts</text>
+    <text x="878" y="899" class="small">Subtotal / conflicting counts → warning · no OCR → text-layer refusal</text>
+  </g>
+
+  <!-- Stage 4: Results UI -->
+  <g>
+    <circle cx="1395" cy="235" r="16" fill="#ccfbf1"/>
+    <text x="1395" y="240" text-anchor="middle" font-size="12" font-weight="850" fill="#0f766e">04</text>
+    <text x="1423" y="231" class="eyebrow" fill="#0f766e">REVIEW IN UI</text>
+    <text x="1423" y="252" class="small">Keep every result legible to a person</text>
+
+    <rect x="1389" y="279" width="335" height="151" rx="15" class="nodeTeal"/>
+    <text x="1409" y="309" class="sectionTitle">Extracted items</text>
+    <text x="1409" y="335" class="body">Description · Qty · Unit · Price · Amount</text>
+    <text x="1409" y="361" class="body">Numbers retain precision and show $ format</text>
+    <text x="1409" y="394" class="path mono">components/line-item-list.tsx</text>
+    <text x="1409" y="416" class="path mono">components/evidence.tsx</text>
+
+    <rect x="1389" y="452" width="335" height="165" rx="15" class="nodeAmber"/>
+    <text x="1409" y="482" class="sectionTitle">Refused / incomplete values</text>
+    <text x="1409" y="508" class="body">Plain-language reason · page · source quote</text>
+    <text x="1409" y="534" class="body">Missing values stay blank; ambiguity is visible</text>
+    <text x="1409" y="570" class="path mono">components/refusal-list.tsx</text>
+    <text x="1409" y="594" class="path mono">components/extraction-result.tsx</text>
+
+    <rect x="1389" y="639" width="335" height="113" rx="15" class="node"/>
+    <text x="1409" y="669" class="sectionTitle">Warnings</text>
+    <text x="1409" y="695" class="body">Subtotal mismatch or conflicting document counts</text>
+    <text x="1409" y="726" class="small">Show both source lines; never choose one silently</text>
+
+    <rect x="1389" y="774" width="335" height="140" rx="15" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="1409" y="804" class="eyebrow" fill="#64748b">RESULT VIEW</text>
+    <text x="1409" y="833" class="body">Counts · pages read · new upload action</text>
+    <text x="1409" y="862" class="body">Structured API errors remain specific</text>
+    <text x="1409" y="891" class="small">HTTP / network errors ≠ extraction refusals</text>
+  </g>
+
+  <!-- Return contract / continuous principle -->
+  <path d="M1555 951v24H245v-24" fill="none" stroke="#0f9b8e" stroke-width="2" stroke-dasharray="7 7" marker-end="url(#arrowTeal)"/>
+  <rect x="653" y="958" width="494" height="34" rx="17" fill="#e6fffb" stroke="#99f6e4"/>
+  <text x="900" y="980" text-anchor="middle" font-size="12" font-weight="750" fill="#0f766e">JSON response returns to the same upload page — refusals and warnings intact</text>
+
+  <!-- Quality / project map footer -->
+  <g filter="url(#shadow)">
+    <rect x="52" y="1010" width="1696" height="183" rx="22" fill="#ffffff" stroke="#dbe4ee"/>
+  </g>
+  <text x="78" y="1043" class="eyebrow" fill="#475569">QUALITY &amp; PROJECT MAP</text>
+  <line x1="895" y1="1060" x2="895" y2="1172" stroke="#e2e8f0"/>
+
+  <text x="78" y="1076" class="sectionTitle">Regression coverage</text>
+  <text x="78" y="1102" class="path mono">tests/extraction/</text>
+  <text x="78" y="1123" class="body">refusal · evidence · core parsing · six supplied PDF samples</text>
+  <text x="78" y="1148" class="path mono">tests/api/ · tests/components/ · tests/fixtures/pdf-factory.ts</text>
+  <text x="78" y="1172" class="small">Fault isolation · source traceability · refusal reaches the rendered UI</text>
+
+  <text x="925" y="1076" class="sectionTitle">Shared contracts and project files</text>
+  <text x="925" y="1102" class="path mono">lib/extraction/types.ts · schema.ts · constants.ts</text>
+  <text x="925" y="1123" class="path mono">next.config.ts · package.json · tsconfig.json · vitest.config.ts</text>
+  <text x="925" y="1148" class="path mono">README.md · TASK.md · public/PDF/ · DOC/</text>
+  <text x="925" y="1172" class="small">Text extraction only · no OCR · unsupported layouts are documented, not hidden</text>
+
+  <text x="900" y="1222" text-anchor="middle" font-size="11" font-weight="650" fill="#94a3b8">INSTA QUOTE AI · ENGINEERING TAKE-HOME · EVIDENCE FIRST</text>
+</svg>

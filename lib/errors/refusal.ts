@@ -40,8 +40,8 @@ export function createRefusal(input: RefusalInput): ExtractionRefusal {
     case "no_text_layer":
       message =
         page === null
-          ? "This PDF has no readable text layer. It may be a scan; OCR is not available, so no values were extracted."
-          : `Page ${page} has no readable text layer. It may be a scan or blank page; no values were extracted from this page.`;
+          ? "This PDF has no readable text layer. It may contain scanned or image-only pages; OCR is not available, so no values were extracted."
+          : `Page ${page} has no readable text layer. It may contain scanned or image-only content; OCR is not available, so no values were extracted from this page.`;
       break;
     case "no_line_items_found":
       message = "No line items could be identified confidently. Check that the document contains a readable item table.";

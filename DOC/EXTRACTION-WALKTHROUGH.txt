@@ -1,0 +1,300 @@
+PDF LINE ITEM EXTRACTOR - CODE WALKTHROUGH
+==========================================
+
+Purpose
+-------
+This note follows one PDF from the API boundary to the JSON shown in the UI.
+It starts at lib/extraction/extractor.ts, the main extraction orchestrator.
+
+The design rule is:
+
+    Emit a value only when it can be assigned to a field and cited to a page
+    and source line. If that is not clear, return a refusal instead of a guess.
+
+
+END-TO-END FLOW
+---------------
+
+    Browser
+      |
+      | multipart/form-data, field "file"
+      v
+    app/api/extract/route.ts
+      | validate request, PDF signature and size
+      v
+    lib/extraction/extractor.ts  <---- START HERE
+      |
+      +--> lib/pdf/extract-text.ts
+      |       PDF.js -> pages -> positioned text -> reconstructed lines
+      |
+      +--> lib/pdf/extract-line-items.ts
+      |       headers -> columns -> candidate rows -> values or refusals
+      |
+      +--> lib/pdf/evidence.ts
+      |       source line -> { page, sourceText }
+      |
+      +--> lib/errors/refusal.ts
+      |       refusal reason -> plain-language message
+      |
+      +--> lib/extraction/schema.ts
+              Zod validation of the final result
+                    |
+                    v
+             JSON response
+                    |
+                    v
+    components/file-upload.tsx
+      |
+      +--> components/extraction-result.tsx
+              |-- components/line-item-list.tsx
+              |      +-- components/evidence.tsx
+              |-- components/refusal-list.tsx
+              +-- document warnings
+
+
+1. EXTRACTION ORCHESTRATOR
+--------------------------
+File: lib/extraction/extractor.ts
+
+export async function extractDocument(data, fileName)
+    This is the entry point used by the API route.
+
+    1. Calls extractPdfText(data).
+    2. On a document-level PDF error, calls emptyResult(...).
+    3. Otherwise calls resultFromText(fileName, pdf).
+
+function emptyResult(fileName, pageCount, reason, message)
+    Builds a schema-valid result containing no items and one document-level
+    refusal. Used for password-protected, corrupt and over-page-limit PDFs.
+
+function resultFromText(fileName, pdf)
+    - Counts the lines and characters read.
+    - Turns individual page failures into page_read_failed refusals.
+    - If the whole PDF has no text, returns a no_text_layer refusal.
+    - If only a page has no text, returns a page-specific refusal for it.
+    - Calls extractLineItems(pdf.pages) for readable pages.
+    - Combines items, refusals and warnings.
+    - Calls extractionResultSchema.parse(...) before returning.
+
+The schema parse is the final internal contract check. Invalid internal output
+is an unexpected extraction failure; it is not silently sent as success JSON.
+
+
+2. PDF TEXT EXTRACTION
+----------------------
+File: lib/pdf/extract-text.ts
+
+export async function extractPdfText(data)
+    - Loads the PDF with PDF.js (pdfjs-dist legacy build).
+    - Enforces a maximum of 100 pages.
+    - Reads each page's text content independently.
+    - A page read exception is saved in failedPages; later pages still run.
+    - Destroys the PDF.js loading task when finished.
+
+function isPdfJsTextItem(value)
+    A type guard: accepts PDF.js items containing text and coordinates.
+
+function groupIntoLines(pageNumber, textItems)
+    - Converts PDF.js text fragments to PdfTextToken values (text, x, y, width).
+    - Sorts tokens by page position.
+    - Groups tokens whose y coordinates are within 2.5 points.
+    - Joins a line's visible fragments into sourceText.
+    - Returns PdfLine objects with their original page number and tokens.
+
+function mapDocumentError(error)
+    Maps known PDF.js password and malformed-document exceptions to
+    DocumentReadError. Unknown errors are rethrown so system failures are not
+    incorrectly described as a bad user PDF.
+
+Important boundary: PDF.js text extraction does not perform OCR. A visually
+readable page stored as one image has zero text items and is refused. In
+IB-STMT47.pdf, page 4 is image-only; it is not a column-mapping failure.
+
+
+3. TABLE / COLUMN MAPPING
+-------------------------
+File: lib/pdf/extract-line-items.ts
+Types: lib/extraction/types.ts (HeaderColumns, PdfLine, PdfPageText, ...)
+
+export function extractLineItems(pages)
+    Runs page by page. Header positions are detected separately on each page.
+    For each line it:
+
+    1. Collects supported summary / warehouse count notes for conflict checks.
+    2. Skips anchored metadata and page-number lines.
+    3. Captures subtotal rows for reconciliation.
+    4. Skips other total / tax summary rows.
+    5. Ignores non-candidate lines that contain no parseable numbers.
+    6. Sends each numeric candidate to parseMappedRow or parseHeaderlessRow.
+    7. Catches row-level failures so one bad row does not stop the page.
+
+function detectHeaderColumns(lines)
+    Looks for a header line with a description-like label, a quantity label,
+    and at least one of a unit-price or amount label. It records the x position
+    of each recognized label in HeaderColumns. Recognized labels include:
+
+        quantity:   Qty, Quantity, Quantities
+        unit price: Unit Price, Price, Rate, Each
+        amount:     Amount, Line Total, Extended, Extension, Total
+        unit:       Unit (distinguishes a standalone Unit from Unit Price)
+        weight:     Weight
+
+    Header matching is label-based and the measurements are page coordinates,
+    not fixed column numbers shared by every invoice.
+
+function headerAnchor(tokens, pattern)
+    Finds the first token matching a normalized column-heading expression and
+    returns its x coordinate.
+
+function unitHeaderAnchor(tokens)
+    Finds a standalone Unit heading without confusing the word Unit in a split
+    "Unit Price" heading for the item's unit column.
+
+function tokenizeLine(line)
+    Splits text fragments containing spaces into position-estimated tokens.
+    It preserves the reconstructed source line separately for evidence.
+
+function nearestNumericField(x, columns)
+    Maps a numeric token to the nearest quantity, unit-price or amount heading.
+    It refuses a token if it is too far from all headings or almost tied
+    between two headings. Tokens left of the first numeric column are not
+    treated as quantities; they may be item codes.
+
+function isInWeightColumn(x, columns)
+    Recognizes numeric tokens positioned under a Weight heading so weight is
+    not accidentally assigned to quantity or price.
+
+function unsupportedWeightRefusals(...)
+    Records a separate, plain-language refusal for a weight value that is
+    visible in the source but outside the supported quote fields.
+
+IB-STMT47 note:
+    The text-based pages have the same Code / Description / Qty / Unit /
+    Unit Price / Amount order. Page 4 has no text fragments at all, so no
+    HeaderColumns can be inferred there. A different column regex cannot
+    extract the image pixels; that needs OCR plus evidence coordinates.
+
+
+4. PARSING A CANDIDATE ROW
+--------------------------
+function parseMappedRow(line, columns, rowId)
+    - Parses visible numeric tokens using parseNumber.
+    - Skips numbers that are in a declared Weight column and records a refusal.
+    - Uses nearestNumericField to assign supported numeric values.
+    - Refuses ambiguous column or number-format assignments.
+    - If quantity, unit price and amount are all present, checks the arithmetic.
+    - If the printed amount contradicts quantity * unit price, refuses the row.
+    - Returns source-backed numbers; missing expected fields remain null and
+      get their own missing_numeric_field refusal.
+    - Attaches evidenceForLine(line) to each returned item.
+
+function parseHeaderlessRow(line, rowId)
+    The fallback is intentionally narrow: exactly three numeric values, a
+    description, and quantity * unit price agreeing with the printed amount.
+    Otherwise it returns a refusal. It does not fill missing values.
+
+function parseNumber(raw, x)
+    Parses supported numeric spellings and currency codes. It returns an
+    ambiguous marker for unclear separators such as 1.234 instead of choosing
+    a locale interpretation. A bare dollar symbol does not identify a country.
+
+function cleanDescription(tokens, columns)
+    Retains descriptive text to the left of the quantity column. It avoids
+    moving numeric column values into the description field.
+
+function findUnit(tokens, columns)
+    Returns a recognized unit near the Unit heading; otherwise null.
+
+function classifyTotal(line)
+    Recognizes subtotal lines for comparison with extracted line amounts.
+
+function readDocumentCountNote(line)
+    Reads supported carton / box / pallet counts from Summary or Warehouse
+    notes. Conflicting counts create a warning with both source lines; neither
+    value is chosen as the correct count.
+
+
+5. EVIDENCE, REFUSALS, WARNINGS
+------------------------------
+File: lib/pdf/evidence.ts
+
+evidenceForLine(line)
+    Returns { page, sourceText }. Every emitted line item points to its page
+    and reconstructed source line. The text is not a byte substring of the
+    PDF file; it is PDF.js text fragments joined in reading order.
+
+File: lib/errors/refusal.ts
+
+createRefusal(input)
+    Converts a stable reason code (for example missing_numeric_field or
+    ambiguous_columns) into a plain-language message for the API and UI.
+    Refusals retain page and sourceText where the source could be read.
+
+Warnings are different from refused rows:
+    - subtotal_mismatch: source subtotal differs from complete extracted lines.
+    - conflicting_document_counts: two source notes state different counts.
+
+
+6. API BOUNDARY
+---------------
+File: app/api/extract/route.ts
+
+POST(request)
+    - Reads multipart form field "file".
+    - Rejects missing / empty files, files over 20 MB and bad PDF signatures.
+    - Sanitizes the returned file name.
+    - Calls extractDocument(bytes, fileName).
+    - Returns { ok: true, result } for a processed PDF, including documents
+      that have refusals.
+    - Returns { ok: false, error: { code, message } } for request / service
+      failures, with appropriate HTTP status codes.
+
+The route uses the Node.js runtime because PDF.js is a server-side dependency.
+
+
+7. UI RESPONSE PATH
+-------------------
+File: components/file-upload.tsx
+
+FileUpload
+    Chooses or drops a PDF, validates its extension and size, posts it to the
+    route, validates the response with Zod, and renders distinct loading,
+    request-error and successful-result states. API refusal data stays in the
+    successful result path; it is not converted into an upload error.
+
+Files that render the result:
+    components/extraction-result.tsx  summary, warnings and sections
+    components/line-item-list.tsx      aligned values and full-width evidence
+    components/evidence.tsx            expandable page/source quote
+    components/refusal-list.tsx        plain-language refusal cards
+
+
+8. TESTS AND SUPPORTING FILES
+-----------------------------
+    tests/extraction/refusal.test.ts
+        Ambiguous values, missing fields, headerless rows, no text layer.
+    tests/extraction/extract-line-items.test.ts
+        Clean lines, line-total contradiction, subtotal warning.
+    tests/extraction/evidence.test.ts
+        Page numbers and numeric values trace to source text.
+    tests/extraction/sample-documents.test.ts
+        Regression cases for the six PDFs in public/PDF when present.
+    tests/api/extract.test.ts
+        Multipart request validation and response contract.
+    tests/components/extraction-result.test.tsx
+        Confirms refusal messages, source lines and warnings reach the UI.
+    tests/fixtures/pdf-factory.ts
+        Small deterministic PDFs for unit / API tests.
+
+    README.md       Setup, behavior, limitations and assessment answers.
+    TASK.md         Assessment brief and implementation coverage checklist.
+    DOC/            Workflow image and this code walkthrough.
+
+
+INTERVIEW SUMMARY
+-----------------
+The API is the boundary. The extractor orchestrates. PDF text extraction
+preserves positions. The line parser only assigns values when headers or a
+strict fallback support the assignment. Evidence follows each line item.
+Unclear values become explicit refusals, and those refusals remain visible in
+the UI. Tests exercise that path from parser through presentation.
