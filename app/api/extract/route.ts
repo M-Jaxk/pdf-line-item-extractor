@@ -1,8 +1,8 @@
 import { extractDocument } from "@/lib/extraction/extractor";
+import { MAX_PDF_SIZE_BYTES, MAX_PDF_SIZE_LABEL } from "@/lib/extraction/constants";
 
 export const runtime = "nodejs";
 
-const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 const PDF_SIGNATURE = "%PDF-";
 
 function apiError(code: string, message: string, status: number): Response {
@@ -43,10 +43,10 @@ export async function POST(request: Request): Promise<Response> {
   if (file.size === 0) {
     return apiError("empty_file", "The selected file is empty.", 400);
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
+  if (file.size > MAX_PDF_SIZE_BYTES) {
     return apiError(
       "file_too_large",
-      "The PDF is larger than the 20 MB upload limit.",
+      `The PDF is larger than the ${MAX_PDF_SIZE_LABEL} upload limit.`,
       413,
     );
   }
@@ -63,10 +63,10 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  if (bytes.byteLength > MAX_UPLOAD_BYTES) {
+  if (bytes.byteLength > MAX_PDF_SIZE_BYTES) {
     return apiError(
       "file_too_large",
-      "The PDF is larger than the 20 MB upload limit.",
+      `The PDF is larger than the ${MAX_PDF_SIZE_LABEL} upload limit.`,
       413,
     );
   }

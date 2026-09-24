@@ -27,8 +27,16 @@ interface ParseLineItemsResult {
   candidateRows: number;
 }
 
-const UNIT_PATTERN = /^(?:ea|each|unit|units|pc|pcs|piece|pieces|m|lm|m2|m3|sqm|kg|g|hr|hrs|hour|hours|day|days|box|bag|tonne|tonnes)$/i;
-const META_LINE_PATTERN = /^(?:invoice|tax invoice|delivery docket|packing slip|packing list|purchase order|customer|supplier|date|due date|invoice number|invoice no\.?|order no\.?|po no\.?|abn|gst number|phone|tel|email|www\.)\b/i;
+interface DocumentCountNote {
+  page: number;
+  value: number;
+  unit: string;
+  sourceText: string;
+}
+
+const UNIT_PATTERN = /^(?:ea|each|unit|units|pc|pcs|piece|pieces|m|lm|m2|m3|sqm|kg|g|hr|hrs|hour|hours|day|days|box|bag|pack|kit|carton|length|roll|sheet|coil|pallet|set|tonne|tonnes)$/i;
+const MEASUREMENT_PATTERN = /^\d[\d,.]*\s*(?:kg|g|lb|lbs|mm|cm|m|lm|m2|m3|sqm|l|ml)$/i;
+const META_LINE_PATTERN = /^(?:invoice|tax invoice|delivery docket|packing slip|packing list|purchase order|customer|supplier|date|due date|payment due|payment terms|invoice number|invoice no\.?|order no\.?|po no\.?|abn|gst number|phone|tel|email|www\.|summary\b|warehouse notes\b|consolidated statement\b)/i;
 const SUMMARY_LINE_PATTERN = /^(?:sub\s*total|subtotal|net total|gst|tax|grand total|total(?: due)?|amount due|balance due)\b/i;
 const PAGE_NUMBER_PATTERN = /^page\s+\d+(?:\s+of\s+\d+)?\s*$/i;
 
@@ -66,6 +74,20 @@ function headerAnchor(tokens: readonly PdfTextToken[], pattern: RegExp): number 
   );
 }
 
+function unitHeaderAnchor(tokens: readonly PdfTextToken[]): number | null {
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const normalized = token.text.trim().toLowerCase().replace(/[.:#]/g, "");
+    if (normalized !== "unit") continue;
+
+    const next = tokens[index + 1];
+    const nextLabel = next?.text.trim().toLowerCase().replace(/[.:#]/g, "");
+    if (nextLabel === "price" && next && next.x - token.x < 55) continue;
+    return token.x;
+  }
+  return null;
+}
+
 function detectHeaderColumns(lines: readonly PdfLine[]): {
   line: PdfLine;
   columns: HeaderColumns;
@@ -78,24 +100,25 @@ function detectHeaderColumns(lines: readonly PdfLine[]): {
       tokens,
       /^(?:amount|line\s*total|extended|extension|total)$/i,
     );
+    const unitPriceX = headerAnchor(
+      tokens,
+      /^(?:(?:unit\s*)?price|rate|each)$/i,
+    );
 
     if (
       quantityX === null ||
-      amountX === null ||
+      (amountX === null && unitPriceX === null) ||
       !/(?:description|details|item|product|service)/i.test(text)
     ) {
       continue;
     }
 
-    const unitPriceX = headerAnchor(
-      tokens,
-      /^(?:(?:unit\s*)?price|rate|each)$/i,
-    );
-    const unitX = headerAnchor(tokens, /^unit$/i);
+    const unitX = unitHeaderAnchor(tokens);
+    const weightX = headerAnchor(tokens, /^weight$/i);
 
     return {
       line,
-      columns: { quantityX, unitPriceX, amountX, unitX },
+      columns: { quantityX, weightX, unitPriceX, amountX, unitX },
     };
   }
   return null;
@@ -106,6 +129,8 @@ function parseNumber(raw: string, x: number): ParsedNumber | null {
   if (!trimmed || /%$/.test(trimmed) || /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$/.test(trimmed)) {
     return null;
   }
+  // In a description, a trailing comma after an integer is usually punctuation.
+  if (/^\d+,$/.test(trimmed)) return null;
 
   const currencyMatch = trimmed.match(/\b(NZD|AUD|USD)\b/i);
   const currency = currencyMatch?.[1]?.toUpperCase() ?? null;
@@ -186,7 +211,9 @@ function nearestNumericField(
     ...(columns.unitPriceX === null
       ? []
       : [{ field: "unitPrice" as const, x: columns.unitPriceX }]),
-    { field: "lineAmount", x: columns.amountX },
+    ...(columns.amountX === null
+      ? []
+      : [{ field: "lineAmount" as const, x: columns.amountX }]),
   ];
   const nearest = anchors
     .map((anchor) => ({ ...anchor, distance: Math.abs(anchor.x - x) }))
@@ -204,12 +231,61 @@ function nearestNumericField(
   return nearest[0].field;
 }
 
+function isInWeightColumn(x: number, columns: HeaderColumns): boolean {
+  if (columns.weightX === null) return false;
+
+  const anchors: Array<{ field: "weight" | NumericField; x: number }> = [
+    { field: "quantity", x: columns.quantityX },
+    ...(columns.unitPriceX === null
+      ? []
+      : [{ field: "unitPrice" as const, x: columns.unitPriceX }]),
+    ...(columns.amountX === null
+      ? []
+      : [{ field: "lineAmount" as const, x: columns.amountX }]),
+    { field: "weight", x: columns.weightX },
+  ];
+  const nearest = anchors
+    .map((anchor) => ({ ...anchor, distance: Math.abs(anchor.x - x) }))
+    .sort((a, b) => a.distance - b.distance);
+
+  return nearest[0].field === "weight" && nearest[0].distance <= 90;
+}
+
+function unsupportedWeightRefusals(
+  tokens: readonly PdfTextToken[],
+  columns: HeaderColumns,
+  line: PdfLine,
+  rowId: string,
+): ExtractionRefusal[] {
+  if (columns.weightX === null) return [];
+
+  const weightTokens = tokens.filter(
+    (token) =>
+      (MEASUREMENT_PATTERN.test(token.text) || parseNumber(token.text, token.x) !== null) &&
+      isInWeightColumn(token.x, columns),
+  );
+
+  return weightTokens.map((token, index) =>
+    createRefusal({
+      id: `${rowId}-weight-${index + 1}`,
+      page: line.pageNumber,
+      sourceText: line.sourceText,
+      reason: "unsupported_numeric_field",
+      fieldLabel: "Weight",
+    }),
+  );
+}
+
 function cleanDescription(tokens: readonly PdfTextToken[], columns?: HeaderColumns): string {
   const cutoff = columns?.quantityX ?? Number.POSITIVE_INFINITY;
   return tokens
     .filter((token) => token.x < cutoff - 4)
     .filter((token) => parseNumber(token.text, token.x) === null)
-    .filter((token) => !isMissingCell(token) && !UNIT_PATTERN.test(token.text))
+    .filter(
+      (token) =>
+        !isMissingCell(token) &&
+        (columns !== undefined || !UNIT_PATTERN.test(token.text)),
+    )
     .map((token) => token.text.trim())
     .filter(Boolean)
     .join(" ")
@@ -219,12 +295,11 @@ function cleanDescription(tokens: readonly PdfTextToken[], columns?: HeaderColum
 
 function findUnit(tokens: readonly PdfTextToken[], columns: HeaderColumns): string | null {
   if (columns.unitX === null) return null;
-  return (
-    tokens.find(
-      (token) =>
-        Math.abs(token.x - columns.unitX!) < 70 && UNIT_PATTERN.test(token.text.trim()),
-    )?.text.trim() ?? null
-  );
+  const token = tokens.find((candidate) => {
+    const normalized = candidate.text.trim().replace(/^[/([{]+|[/,;:.)\]}]+$/g, "");
+    return Math.abs(candidate.x - columns.unitX!) < 70 && UNIT_PATTERN.test(normalized);
+  });
+  return token?.text.trim().replace(/^[/([{]+|[/,;:.)\]}]+$/g, "") ?? null;
 }
 
 function isHeaderLine(line: PdfLine, header: PdfLine | null): boolean {
@@ -256,13 +331,37 @@ function classifyTotal(line: PdfLine): { subtotal: number; token: string } | nul
     : { subtotal: last.value, token: line.sourceText };
 }
 
+function readDocumentCountNote(line: PdfLine): DocumentCountNote | null {
+  if (!/^(?:summary|warehouse notes)\b/i.test(line.sourceText.trim())) return null;
+  const match = line.sourceText.match(/\b(\d[\d,]*)\s+(cartons?|boxes?|pallets?)\b/i);
+  if (!match) return null;
+
+  const value = Number(match[1].replaceAll(",", ""));
+  if (!Number.isFinite(value)) return null;
+
+  return {
+    page: line.pageNumber,
+    value,
+    unit: match[2].toLowerCase().replace(/boxes$/, "box").replace(/s$/, ""),
+    sourceText: line.sourceText,
+  };
+}
+
+function formatCountUnit(value: number, unit: string): string {
+  if (value === 1) return unit;
+  return unit === "box" ? "boxes" : `${unit}s`;
+}
+
 function parseMappedRow(
   line: PdfLine,
   columns: HeaderColumns,
   rowId: string,
 ): { item?: LineItem; refusals: ExtractionRefusal[] } {
   const tokens = tokenizeLine(line);
-  const numbers = parseNumbers(tokens);
+  const refusals = unsupportedWeightRefusals(tokens, columns, line, rowId);
+  const numbers = parseNumbers(tokens).filter(
+    (number) => !isInWeightColumn(number.x, columns),
+  );
   const ambiguousNumber = numbers.find((number) => number.ambiguous);
   if (ambiguousNumber) {
     return {
@@ -310,7 +409,6 @@ function parseMappedRow(
     };
   }
 
-  const refusals: ExtractionRefusal[] = [];
   const expectedFields: NumericField[] = ["quantity"];
   if (columns.unitPriceX !== null) expectedFields.push("unitPrice");
   expectedFields.push("lineAmount");
@@ -413,12 +511,16 @@ export function extractLineItems(pages: readonly PdfPageText[]): ParseLineItemsR
   const refusals: ExtractionRefusal[] = [];
   const warnings: ExtractionWarning[] = [];
   const totals: Array<{ page: number; value: number; sourceText: string }> = [];
+  const documentCountNotes: DocumentCountNote[] = [];
   let candidateRows = 0;
   let rowNumber = 0;
 
   for (const page of pages) {
     const detectedHeader = detectHeaderColumns(page.lines);
     for (const line of page.lines) {
+      const documentCountNote = readDocumentCountNote(line);
+      if (documentCountNote) documentCountNotes.push(documentCountNote);
+
       if (isHeaderLine(line, detectedHeader?.line ?? null)) continue;
       if (
         META_LINE_PATTERN.test(line.sourceText.trim()) ||
@@ -490,6 +592,24 @@ export function extractLineItems(pages: readonly PdfPageText[]): ParseLineItemsR
         message: `The printed subtotal is ${subtotal.value.toFixed(2)}, but the extracted line amounts add up to ${extractedSum.toFixed(2)}. Review the document totals.`,
       });
     }
+  }
+
+  for (let index = 0; index < documentCountNotes.length; index += 1) {
+    const first = documentCountNotes[index];
+    const conflicting = documentCountNotes
+      .slice(index + 1)
+      .find((note) => note.unit === first.unit && note.value !== first.value);
+    if (!conflicting) continue;
+
+    warnings.push({
+      id: `document-count-conflict-${first.page}-${conflicting.page}-${index}`,
+      page: first.page,
+      sourceText: first.sourceText,
+      conflictingPage: conflicting.page,
+      conflictingSourceText: conflicting.sourceText,
+      reason: "conflicting_document_counts",
+      message: `The document lists ${first.value} ${formatCountUnit(first.value, first.unit)} on page ${first.page} and ${conflicting.value} ${formatCountUnit(conflicting.value, conflicting.unit)} on page ${conflicting.page}. Review both notes; no count was chosen.`,
+    });
   }
 
   if (candidateRows === 0 && allLines.some((line) => line.sourceText.trim())) {

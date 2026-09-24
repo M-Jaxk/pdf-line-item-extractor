@@ -32,7 +32,8 @@ export type NumericField = "quantity" | "unitPrice" | "lineAmount";
 
 export interface HeaderColumns {
   quantityX: number;
+  weightX: number | null;
   unitPriceX: number | null;
-  amountX: number;
+  amountX: number | null;
   unitX: number | null;
 }

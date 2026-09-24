@@ -22,6 +22,7 @@ export const refusalReasonSchema = z.enum([
   "ambiguous_columns",
   "ambiguous_number_format",
   "missing_numeric_field",
+  "unsupported_numeric_field",
   "line_total_mismatch",
   "row_parse_failed",
   "page_read_failed",
@@ -36,6 +37,7 @@ export const refusalSchema = z.object({
   sourceText: z.string().nullable(),
   reason: refusalReasonSchema,
   field: z.enum(["quantity", "unitPrice", "lineAmount"]).optional(),
+  fieldLabel: z.string().optional(),
   message: z.string().min(1),
 });
 
@@ -43,7 +45,9 @@ export const warningSchema = z.object({
   id: z.string().min(1),
   page: z.number().int().positive(),
   sourceText: z.string().min(1),
-  reason: z.literal("subtotal_mismatch"),
+  conflictingPage: z.number().int().positive().optional(),
+  conflictingSourceText: z.string().min(1).optional(),
+  reason: z.enum(["subtotal_mismatch", "conflicting_document_counts"]),
   message: z.string().min(1),
 });
 

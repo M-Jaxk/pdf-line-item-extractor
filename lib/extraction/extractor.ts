@@ -65,11 +65,22 @@ function resultFromText(fileName: string, pdf: PdfTextDocument): ExtractionResul
     });
   }
 
+  const blankPageRefusals = pdf.pages
+    .filter((page) => page.characterCount === 0)
+    .map((page) =>
+      createRefusal({
+        id: `page-${page.pageNumber}-no-text-layer`,
+        page: page.pageNumber,
+        sourceText: null,
+        reason: "no_text_layer",
+      }),
+    );
+
   const parsed = extractLineItems(pdf.pages);
   return extractionResultSchema.parse({
     document: { fileName, pageCount: pdf.pageCount },
     items: parsed.items,
-    refusals: [...pageRefusals, ...parsed.refusals],
+    refusals: [...pageRefusals, ...blankPageRefusals, ...parsed.refusals],
     warnings: parsed.warnings,
     stats: {
       pagesRead: pdf.pages.length,

@@ -1,69 +1,60 @@
-import Image from "next/image";
+import { FileUpload } from "@/components/file-upload";
+
+function BrandMark() {
+  return (
+    <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-xl bg-slate-950 text-xs font-bold tracking-tight text-white">
+      IQ
+    </span>
+  );
+}
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-[#f7f8f6] px-4 py-5 text-slate-950 sm:px-6 sm:py-8">
+      <a href="#upload-heading" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:font-semibold focus:shadow-lg">
+        Skip to upload
+      </a>
+      <div className="mx-auto max-w-5xl">
+        <header className="flex items-center justify-between border-b border-slate-200/80 pb-5">
+          <div className="inline-flex items-center gap-3">
+            <BrandMark />
+            <span className="text-sm font-semibold tracking-tight text-slate-800">Insta Quote AI</span>
+          </div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-600">
+            <span aria-hidden="true" className="size-1.5 rounded-full bg-emerald-500" />
+            Document review
+          </span>
+        </header>
+
+        <div className="mx-auto max-w-3xl py-10 sm:py-14">
+          <section className="mb-8 sm:mb-10">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">PDF line item extractor</p>
+            <h1 className="mt-3 max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.04em] text-slate-950 sm:text-5xl">
+              Clear numbers.
+              <span className="block text-slate-500">With their source attached.</span>
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
+              Upload an invoice, packing list, or delivery docket. We’ll show what we could read and call out anything that needs a person to check it.
+            </p>
+          </section>
+
+          <section aria-labelledby="upload-heading" className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.35)] sm:p-7">
+            <div className="mb-5 flex items-start gap-3">
+              <span aria-hidden="true" className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-sm font-bold text-emerald-900">1</span>
+              <div>
+                <h2 id="upload-heading" tabIndex={-1} className="text-base font-semibold text-slate-900 outline-none">Choose a document</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500">Only values that can be traced to the PDF will be included.</p>
+              </div>
+            </div>
+            <FileUpload />
+          </section>
+
+          <footer className="mt-6 flex flex-col gap-2 px-1 text-xs leading-5 text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <p>Unclear values are left out, never filled in by guesswork.</p>
+            <p>PDF text extraction only · Scanned images need OCR</p>
+          </footer>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

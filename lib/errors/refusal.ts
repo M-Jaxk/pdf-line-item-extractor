@@ -21,6 +21,7 @@ export interface RefusalInput {
   sourceText: string | null;
   reason: RefusalReason;
   field?: NumericField;
+  fieldLabel?: string;
   detail?: string;
 }
 
@@ -37,7 +38,10 @@ export function createRefusal(input: RefusalInput): ExtractionRefusal {
 
   switch (reason) {
     case "no_text_layer":
-      message = "This PDF has no readable text layer. It may be a scan; OCR is not available, so no values were extracted.";
+      message =
+        page === null
+          ? "This PDF has no readable text layer. It may be a scan; OCR is not available, so no values were extracted."
+          : `Page ${page} has no readable text layer. It may be a scan or blank page; no values were extracted from this page.`;
       break;
     case "no_line_items_found":
       message = "No line items could be identified confidently. Check that the document contains a readable item table.";
@@ -50,6 +54,9 @@ export function createRefusal(input: RefusalInput): ExtractionRefusal {
       break;
     case "missing_numeric_field":
       message = `The ${FIELD_LABELS[field ?? "lineAmount"]} is missing on ${pageLabel}. It was left blank rather than estimated.`;
+      break;
+    case "unsupported_numeric_field":
+      message = `The ${input.fieldLabel ?? "measurement"} on ${pageLabel} is shown in the source but is not included as a quote value by this extractor.`;
       break;
     case "line_total_mismatch":
       message = `The quantity and unit price on ${pageLabel} do not agree with the printed line amount${detail ? ` (${detail})` : ""}. This row was not extracted.`;
@@ -77,6 +84,7 @@ export function createRefusal(input: RefusalInput): ExtractionRefusal {
     sourceText: input.sourceText,
     reason,
     ...(field ? { field } : {}),
+    ...(input.fieldLabel ? { fieldLabel: input.fieldLabel } : {}),
     message,
   };
 }
