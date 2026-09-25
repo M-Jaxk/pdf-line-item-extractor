@@ -1,0 +1,14 @@
+.git
+.next
+node_modules
+coverage
+tests
+DOC
+public/PDF
+.env
+.env.*
+!.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tsbuildinfo

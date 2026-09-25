@@ -2,6 +2,19 @@
 
 A small web app and conservative PDF-to-JSON extraction service for invoices, packing lists, and delivery documents. It uses PDF text positioning and explicit table headings; it does not use OCR or an AI model. A value is emitted only when its source row can be identified, and every extracted item includes its page and reconstructed source line.
 
+## Tech stack
+
+- **Language:** TypeScript
+- **Web framework and UI:** Next.js 16.3 with the App Router and React 19.2
+- **Styling:** Tailwind CSS 4
+- **API:** Next.js Route Handler (`POST /api/extract`)
+- **PDF text extraction:** PDF.js (`pdfjs-dist` 6.3); OCR is not included
+- **Schema validation:** Zod 4
+- **Testing:** Vitest 5; `pdf-lib` generates test PDFs
+- **Runtime/deployment:** Node.js 24; Docker multi-stage build with Next.js standalone output on Alpine, orchestrated locally with Docker Compose
+
+The service has no database or external AI service.
+
 ## Project workflow
 
 ![End-to-end PDF Line Item Extractor workflow](DOC/pdf-line-item-extractor-workflow.png)
@@ -17,6 +30,35 @@ Requirements: Node.js 22.13+ (Node.js 24 recommended).
 ```bash
 npm install
 npm run dev
+```
+
+## Run with Docker
+
+The multi-stage Docker build uses Next.js standalone output and an Alpine
+runtime image. Tests, documentation, local build output, and the supplied
+`public/PDF` samples are excluded from the Docker build context.
+
+```bash
+docker compose up --build -d
+docker compose ps
+```
+
+Open `http://localhost:3002`. The container listens on port 3000 internally and
+is published on host port 3002. It runs as a non-root user, has a
+Docker health check at `/api/health`, and Compose restarts it unless it was
+explicitly stopped. To stop it, run `docker compose down`.
+
+If host port 3002 is already in use, set another port, for example:
+
+```bash
+APP_PORT=3003 docker compose up --build -d
+```
+
+To build without Compose:
+
+```bash
+docker build -t pdf-line-item-extractor:local .
+docker run --rm -p 3002:3000 pdf-line-item-extractor:local
 ```
 
 Part A is available at `POST /api/extract`. Send a multipart form field named `file` containing a PDF:
@@ -54,7 +96,7 @@ Successful processing returns HTTP 200, including when some rows are refused:
 
 Upload/request failures return a non-2xx response with `{ "ok": false, "error": { "code", "message" } }`. Document-level problems such as encrypted, malformed, or image-only PDFs are returned as structured refusals so callers can display the reason.
 
-The upload page is available at `http://localhost:3000`. Drop a PDF onto the upload area or browse for a file. The results show extracted values, expandable evidence, subtotal warnings, and plain-language notes for refused values. HTTP/API errors retain the service's message, and network failures explain that the service could not be reached.
+The upload page is available at `http://localhost:3002`. Drop a PDF onto the upload area or browse for a file. The results show extracted values, expandable evidence, subtotal warnings, and plain-language notes for refused values. HTTP/API errors retain the service's message, and network failures explain that the service could not be reached.
 
 ## Extraction behavior and current limits
 
@@ -79,7 +121,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-Tests create small PDFs in memory to check evidence, ambiguity, missing values, line-total contradictions, subtotal warnings, and the HTTP upload contract. When the supplied files are present in `public/PDF`, regression tests also run against all six assessment documents.
+Tests create small PDFs in memory to check evidence, ambiguity, missing values, line-total contradictions, subtotal warnings, and the HTTP upload contract. There are also six regression cases for the supplied assessment PDFs. They all run in this workspace; because the sample PDFs are local untracked files, those cases are skipped in a fresh checkout until the PDFs are placed in `public/PDF`.
 
 ## Assessment notes
 
@@ -89,8 +131,8 @@ The hardest decision was how much to infer when table headings are absent. I cho
 
 ### Where I am not confident
 
-I am not confident this layout-based parser will handle varied real-world PDF generators, rotated text, multi-line item descriptions, merged cells, or unusual fonts consistently. The sample assessment documents should be used to refine the supported layouts. Column positions are approximations reconstructed from text coordinates and need validation against those files.
+I am not confident this layout-based parser will handle PDF generators beyond the six tested samples, especially rotated text, multi-line item descriptions, merged cells, or unusual fonts. Column positions are inferred from PDF.js text coordinates with simple per-page anchors and tolerances; the six fixtures validate these heuristics only for their layouts.
 
 ### What I would do with three more days
 
-I would expand regression coverage for the six supplied PDFs, improve per-document table/header detection, and add browser-level tests for upload, loading, refusal, warning, and retry states. I would also add operational safeguards and metrics around unsupported layouts before widening the parser's acceptance rules.
+The six supplied PDFs now have regression coverage. With three more days, I would broaden the test corpus with additional layouts, refine per-page header detection based on those cases, and add browser-level tests for upload, loading, refusal, warning, and retry states. I would also collect metrics on refusal categories and unsupported layouts before widening the parser's acceptance rules.

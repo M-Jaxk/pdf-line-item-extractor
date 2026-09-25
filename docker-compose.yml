@@ -1,0 +1,10 @@
+services:
+  pdf-line-item-extractor:
+    build:
+      context: .
+    image: pdf-line-item-extractor:local
+    ports:
+      - "${APP_PORT:-3002}:3000"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 15s

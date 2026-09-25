@@ -67,7 +67,9 @@ No starter repository. Set up the project from scratch, in whichever stack fits 
 - [x] Subtotal warnings shown separately with their source.
 - [x] Document status, counts, and an option to process another file.
 
-### Remaining validation
+### Docker deployment
 
-- [ ] Add browser-automation tests for interactive upload, loading, failure, refusal, and retry states.
-- [ ] Evaluate additional PDF layouts beyond the six supplied files before broadening extraction heuristics.
+- [x] Multi-stage Next.js standalone image with an Alpine production runtime.
+- [x] Exclude tests, documentation, local build output, and supplied sample PDFs from the build context.
+- [x] Run as a non-root user with a `/api/health` health check and Compose restart policy.
+- [x] Build and smoke-test the image: 304 MB; health check passed; a sample PDF extracted successfully.
